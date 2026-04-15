@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ishowsagar/go-pizza-shop/internal/models"
 )
 
 // type that stores loginData
@@ -14,6 +15,8 @@ type LoginData struct {
 
 type AdminDashboardData struct {
 	Username string
+	Orders []models.Order
+	Statuses []string
 }
 
 // method that belongs to the *Controller
@@ -66,11 +69,51 @@ func(c *Controller) HandleLogout(ctx *gin.Context) {
 
 func(c *Controller) ServeAdminDashboardPanel(ctx *gin.Context) {
 
+	// * fetching all orders in this panel for admin login
+	orders,err := c.orderModel.GetAllOrders()
+	if err != nil {
+		ctx.String(http.StatusInternalServerError,err.Error())
+		return
+	}
+
 	// get sesseion 	
 	retrievedUsername := GetSessionString(ctx,"username") //* would be a method that fetches info from req by using the passed string
 	ctx.HTML(http.StatusOK,"admin.tmpl",AdminDashboardData{
-		Username:retrievedUsername ,
-	})
+		// @ Data sending to the above mentioned "admin.tmpl" template --> "." refer to this all data as whole
+		Username:retrievedUsername,
+		Orders: orders,
+		Statuses: models.OrderStatus,
+	})	
+}
 
-	
+// update order status
+func(c *Controller) HandleOrderUpdateRequest(ctx *gin.Context) {
+	orderID := ctx.Param("id")
+	newStatus := ctx.PostForm("status") //* fetching new status val that has to be updated with
+
+	err := c.orderModel.UpdateOrderStatus(orderID,newStatus)
+	if err != nil {
+		ctx.String(http.StatusInternalServerError,err.Error())
+		return
+	}
+
+	c.NotificationManager.Notify(NotificationKeyOrder(orderID),"order_updated")
+
+	ctx.Redirect(http.StatusSeeOther,"/admin")
+}
+
+// deletes order from the db
+func(c *Controller) HandleOrderDelelteRequest(ctx *gin.Context) {
+	// fetch id of the order that is going to be deleted
+	orderID := ctx.Param("id")
+	if orderID == "" {
+		ctx.String(http.StatusInternalServerError,"Order id not found!.")
+	}
+	// call order delete meth that is attached on O.M
+	err := c.orderModel.DeleteOrder(orderID)
+	if err != nil {
+		ctx.String(http.StatusInternalServerError,err.Error())
+	}
+
+	ctx.Redirect(http.StatusSeeOther,"/admin")
 }

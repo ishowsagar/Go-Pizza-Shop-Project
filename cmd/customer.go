@@ -88,6 +88,7 @@ func(c *Controller) HandleNewOrderPost(ctx *gin.Context) {
 	}
 
 	slog.Info("order is successfully placed","orderID",order.ID,"customer",order.CustomerName)//! just pass key val pairs
+	c.NotificationManager.Notify(NotificationKeyAdminNewOrders,"new order is created!.")
 	ctx.Redirect(http.StatusSeeOther,"/customer/"+order.ID) //* redirecting client to this UrlPath once order is placed successfully
 }
 

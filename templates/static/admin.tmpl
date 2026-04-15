@@ -134,13 +134,16 @@
 
         let newOrdersCount = 0;
         const eventSrc = new EventSource("/admin/notifications");
-        eventSrc.onmessage = e => {
+        const handleNewOrderMessage = () => {
             newOrdersCount++;
             newOrdersBadge.textContent = `${newOrdersCount} new order${newOrdersCount === 1 ? '' : 's'}`
             newOrdersBadge.classList.remove("hidden");
             lastFetched.textContent = updateTime();
         }
-        eventSrc.onerror = err => console.error("EventSource fialed:", err)
+
+        eventSrc.onmessage = handleNewOrderMessage;
+        eventSrc.addEventListener("message", handleNewOrderMessage);
+        eventSrc.onerror = err => console.error("EventSource failed:", err)
     })
 </script>
 {{template "bottom" .}}

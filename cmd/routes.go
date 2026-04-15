@@ -13,7 +13,7 @@ func SetupRoutes(router *gin.Engine, c *Controller,store sessions.Store) {
 	router.GET("/",c.ServeNewOrderRequest)
 	router.GET("/customer/:id",c.ServeCustomer)
 	router.POST("/new-order",c.HandleNewOrderPost)
-
+	router.GET("/notifications",c.notificationHandler)
 
 	router.GET("/login",c.HandleLoginGetRequest)
 	router.POST("/login",c.HandleLoginPostRequest)
@@ -25,6 +25,9 @@ func SetupRoutes(router *gin.Engine, c *Controller,store sessions.Store) {
 	{
 		// ! if it has session with userID attached to it --> makes an get req and call this method on it to serve the response
 		admin.GET("",c.ServeAdminDashboardPanel)
+		admin.GET("/notifications",c.AdminNotiFHandler)
+		admin.POST("/order/:id/update",c.HandleOrderUpdateRequest)
+		admin.POST("/order/:id/delete",c.HandleOrderDelelteRequest)
 	}
 	// serving static
 	router.Static("/static","templates/static")

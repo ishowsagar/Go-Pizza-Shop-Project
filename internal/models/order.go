@@ -78,5 +78,35 @@ func (om *OrderModel) GetOrder(orderID string) (*Order,error) {
 
 }
 
+// method that returns all orders
+func (o *OrderModel) GetAllOrders() ([]Order,error) {
+	var orders []Order
+	tx := o.DB.Preload("Items").Order("created_at desc").Find(&orders) //* finding all entries and ordering by these cols and populating into &orders Slice
+	if tx.Error != nil {
+		return nil,tx.Error
+	}
+	return orders,nil
+}
+
+// update order by id
+func(o *OrderModel) UpdateOrderStatus(id string,status string) error {
+	err := o.DB.Model(&Order{}).Where("id=?",id).UpdateColumn("status",status).Error
+	if err!= nil {
+		return err
+	}
+	return nil
+}
+
+//  delete order by id
+func(o *OrderModel) DeleteOrder(id string) error {
+	err := o.DB.Select("Items").Delete(&Order{ID: id}).Error
+	if err!= nil {
+		return err
+	}
+	return nil
+}
+
+
+
 
 
