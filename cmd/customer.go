@@ -15,6 +15,12 @@ type OrderFormData struct {
 	PizzaSizes []string
 }
 
+type CustomerData struct {
+	Title string
+	Order *models.Order
+	Statuses []string
+}
+
 // type of data incoming from client - to decode it properly into store vars
 type OrderRequest struct {
 	Name string `form:"name" binding:"required,min=2,max=70"` //! specifying tags to check what it would be in form and binding validator on in for gin
@@ -102,10 +108,9 @@ func(c *Controller) ServeCustomer(ctx *gin.Context) {
 	}
 
 	// otherwise if successfully retrieved order --> render it in html template
-	ctx.HTML(http.StatusOK,"customer.tmpl",gin.H{
-	// todo --> create templalte "customer.tmpl" to send res
-		// * sending this order to tmpl  
-		"Order" : retrievedOrder,
-		"Statuses": models.OrderStatus,
+	ctx.HTML(http.StatusOK,"customer.tmpl",CustomerData{
+		Title: "Pizza Order Status"+orderID,
+		Order: retrievedOrder,
+		Statuses: models.OrderStatus,
 	})
 }

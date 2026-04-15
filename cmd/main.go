@@ -19,7 +19,7 @@ func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout,nil))
 	slog.SetDefault(logger) // default logger for whole app 
 
-	// !setting up an instance of DBModel
+	// !setting up an instance of DBModel :- UserModel,OrderModel --> Db's
 	dbModel,err := models.ConnectionToDB(config.DBConnStr)
 	
 	if err != nil {
@@ -28,9 +28,12 @@ func main() {
 		os.Exit(1) // exiting program
 	}
 
+
 	slog.Info("Db connection is successfully loaded ⚡...")
 	RegisterCustomValidator() // start up validator
 
+	// ! setting up session store
+	sessionStore := SetupStore(dbModel.OrderModel.DB,[]byte(config.SessionSecretKey))
 	//!   setting up instance of controller
 	controller := NewController(dbModel)
 
@@ -42,7 +45,7 @@ func main() {
 		os.Exit(1) // exiting program
 	}
 	
-	SetupRoutes(router,controller)
+	SetupRoutes(router,controller,sessionStore)
 	slog.Info("server has started successfully🚀...","url","http://localhost:"+config.Port)
 	router.Run(":"+config.Port)
 }
