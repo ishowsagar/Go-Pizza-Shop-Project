@@ -80,7 +80,7 @@ func SetupStore(db *gorm.DB,secretKey []byte) sessions.Store{
 
 // func that sets up key-valeu on the req's session
 func SetSessionValue(ctx *gin.Context,key string,value interface{}) error {
-	session := sessions.Default(ctx)
+	session := sessions.Default(ctx) //* getting default session
 	session.Set(key,value)
 	return session.Save() //* saves this context on the req
 }

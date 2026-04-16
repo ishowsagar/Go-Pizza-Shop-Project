@@ -19,7 +19,7 @@ func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout,nil))
 	slog.SetDefault(logger) // default logger for whole app 
 
-	// !setting up an instance of DBModel :- UserModel,OrderModel --> Db's
+	// !setting up an instance of DBModel :- UserModelStore,OrderModelStore --> Db's
 	dbModel,err := models.ConnectionToDB(config.DBConnStr)
 	
 	if err != nil {
@@ -33,9 +33,12 @@ func main() {
 	RegisterCustomValidator() // start up validator
 
 	// ! setting up session store
-	sessionStore := SetupStore(dbModel.OrderModel.DB,[]byte(config.SessionSecretKey))
+	sessionStore := SetupStore(dbModel.DbConn,[]byte(config.SessionSecretKey)) //* NOw u can see we can't directly expose db of type *gorm.db but interface is acting s security
 	//!   setting up instance of controller
 	controller := NewController(dbModel)
+
+	// * instead of passing controller --> we can pass instance of type that stores iface where all meths belongs to the controller
+	masterRoutingController := NewMasterController(*controller)
 
 	// @ creating router 
 	router := gin.Default()
@@ -45,7 +48,7 @@ func main() {
 		os.Exit(1) // exiting program
 	}
 	
-	SetupRoutes(router,controller,sessionStore)
+	SetupRoutes(router,&masterRoutingController,sessionStore)
 	slog.Info("server has started successfully🚀...","url","http://localhost:"+config.Port)
 	router.Run(":"+config.Port)
 }

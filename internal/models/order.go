@@ -39,7 +39,21 @@ type Order struct {
 	CreatedAt time.Time `json:"createdAt"` 
 }
 
-// @ interface --> stores all methods that belongs and implemented by the type --> *Order
+// @ interface --> stores all methods that belongs and implemented by the type --> *OrderModel
+type OrderModelStore interface {
+	CreateOrder(order *Order) error
+	GetOrder(orderID string) (*Order,error)
+	GetAllOrders() ([]Order,error)
+	UpdateOrderStatus(id string,status string) error
+	DeleteOrder(id string) error 
+}
+
+// returns instance of OrderModel type struct
+func NewOrderModel(db *gorm.DB) *OrderModel {
+	return &OrderModel{
+		DB: db,
+	}
+}
 
 // @methods that belongs to the type -> *Order
 func (o *Order) BeforeCreate(tx *gorm.DB) error {

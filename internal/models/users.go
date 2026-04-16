@@ -19,6 +19,19 @@ type UserModel struct {
 	Db *gorm.DB
 }
 
+// @iterface of UserModel type where all methods belongs to this type
+type UserModelStore interface {
+	AuthenticateUser(usernamePayload,passwordPayload string) (*User,error)
+	GetUserByID(id string) (*User,error)
+}
+
+// returns the instance of UserModel type struct which implements UserModelStore iface as this iface stores all methods which belongs to the UserModel
+func NewUserModel(db *gorm.DB) *UserModel {
+	return &UserModel{
+		Db: db,
+	}
+}
+
 // method that belongs to the UserModel{gormDb} -> gets user from db query --> compare pass hash and then call next method
 func(u *UserModel) AuthenticateUser(usernamePayload,passwordPayload string) (*User,error) {
 	var user User

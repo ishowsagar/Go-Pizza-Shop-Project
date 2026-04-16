@@ -2,12 +2,33 @@ package main
 
 import "sync"
 
+
+
 type NotificationManager struct {
 	clients map[string]map[chan string]bool //! map -> key string , val of type --> map[whose key is string] bool
 	//* channels graphy *
 	// $ reading from channel into  x <- chan
 	//# directing output to channel Y <- "str"
 	goRoutinelockSafetyMutex sync.RWMutex //* prevent multi go routines to crash by locking current r/w to be finished first before executing another go routine
+}
+
+// @interface for notification manager type
+type NotificationManagerIface interface {
+	AddClient(key string,client chan string)
+	RemoveClient(key string,client chan string)
+	Notify(key,message string)
+}
+
+// type that stores interface which has all the methods that belongs to the type Notification
+type NotificationManagerStore struct {
+	NotiManagerIface NotificationManagerIface
+} 
+
+// func that returns type that stores interface of type *NotifictionStore
+func NewNotificationManagerStore(notificationManager *NotificationManager) NotificationManagerStore {
+	return NotificationManagerStore{
+		NotiManagerIface: notificationManager ,
+	}
 }
 
 // func that returns the instance of type 'this'

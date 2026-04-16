@@ -31,9 +31,26 @@ type OrderRequest struct {
 	Instructions []string `form:"instructions" binding:"max=140"`
 }
 
+// interface that stores methods only for customer, that too belongs to Controller type
+type customerOnlysRouteControllerStore interface {
+	ServeCustomerNewOrderRequest(ctx *gin.Context)
+	HandleCustomerNewOrderPost(ctx *gin.Context)
+	ServeCustomer(ctx *gin.Context)
+}
+
+type customerController struct {
+	customerOnlysRouteControllerStore customerOnlysRouteControllerStore
+}
+
+// Routes only customer controller methods
+func NewCustomerController(c Controller) customerController {
+	return customerController{
+		customerOnlysRouteControllerStore: &c ,
+	}
+}
 
 //@ methods that belongs to type -> *Controller
-func(c *Controller) ServeNewOrderRequest(ctx *gin.Context) {
+func(c *Controller) ServeCustomerNewOrderRequest(ctx *gin.Context) {
 	//* creating template passing this data struct
 	// todo --> create templalte "order.tmpl" to send res
 	ctx.HTML(http.StatusOK,"order.tmpl",OrderFormData{
@@ -44,7 +61,7 @@ func(c *Controller) ServeNewOrderRequest(ctx *gin.Context) {
 }
 
 // we would be writing respons to client using ctx's methods like Json
-func(c *Controller) HandleNewOrderPost(ctx *gin.Context) {
+func(c *Controller) HandleCustomerNewOrderPost(ctx *gin.Context) {
 
 	var orderReq OrderRequest
 
@@ -80,7 +97,7 @@ func(c *Controller) HandleNewOrderPost(ctx *gin.Context) {
 		Items: orderItemsReq,
 	}
 
-	err = c.orderModel.CreateOrder(&order)
+	err = c.OrderStore.CreateOrder(&order)
 	if err != nil {
 		slog.Error("failed to create an order -%v","error",err)
 		ctx.String(http.StatusInternalServerError,"internal server error")
@@ -88,7 +105,7 @@ func(c *Controller) HandleNewOrderPost(ctx *gin.Context) {
 	}
 
 	slog.Info("order is successfully placed","orderID",order.ID,"customer",order.CustomerName)//! just pass key val pairs
-	c.NotificationManager.Notify(NotificationKeyAdminNewOrders,"new order is created!.")
+	c.NotificationManagerStore.NotiManagerIface.Notify(NotificationKeyAdminNewOrders,"new order is created!.")
 	ctx.Redirect(http.StatusSeeOther,"/customer/"+order.ID) //* redirecting client to this UrlPath once order is placed successfully
 }
 
@@ -101,7 +118,7 @@ func(c *Controller) ServeCustomer(ctx *gin.Context) {
 		return
 	}
 	 
-	retrievedOrder,err := c.orderModel.GetOrder(orderID)
+	retrievedOrder,err := c.OrderStore.GetOrder(orderID)
 	if err != nil {
 		slog.Error("wrong order id!.")
 		ctx.String(http.StatusNotFound,"Order not found,please pass correct order id")

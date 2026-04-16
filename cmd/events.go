@@ -7,14 +7,34 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (c *Controller) notificationHandler(ctx *gin.Context) {
+// stores only those methods which belongs to Controller but related to event only
+type EventsOnlyControllerStore interface {
+	handleEventNotification(ctx *gin.Context)
+	handleEventStreamSSE(ctx *gin.Context,client chan string)
+	hanldeEventAdminNotiFHandler(ctx *gin.Context) 
+}
+
+
+type eventController struct {
+	EventsOnlyControllerStoreIface EventsOnlyControllerStore
+}
+
+// Routes only event controller methods
+func NewEventController(c Controller) eventController {
+	return eventController{
+		EventsOnlyControllerStoreIface:&c ,
+	}
+}
+
+
+func (c *Controller) handleEventNotification(ctx *gin.Context) {
 	orderID := ctx.Query("orderId")
 
 	if orderID == "" {
 		ctx.String(400,"Invalid OrderId")
 		return
 	}
-	_,err := c.orderModel.GetOrder(orderID)
+	_,err := c.OrderStore.GetOrder(orderID)
 	if err != nil {
 		ctx.String(400,"Order not found")
 		return
@@ -22,18 +42,18 @@ func (c *Controller) notificationHandler(ctx *gin.Context) {
 
 	key := NotificationKeyOrder(orderID)
 	client := make(chan string,10)
-	c.NotificationManager.AddClient(key,client)
+	c.NotificationManagerStore.NotiManagerIface.AddClient(key,client)
 
 	defer func ()  {
-		c.NotificationManager.RemoveClient(key,client)
+		c.NotificationManagerStore.NotiManagerIface.RemoveClient(key,client)
 		slog.Info("Customer client disconnected","orderId",orderID)
 	}()
 
-	c.StreamSSE(ctx,client)
+	c.handleEventStreamSSE(ctx,client)
 }
 
 // func that do the serverSideEvent
-func(c *Controller) StreamSSE(ctx *gin.Context,client chan string) {
+func(c *Controller) handleEventStreamSSE(ctx *gin.Context,client chan string) {
 	ctx.Header("Content-type","text/event-stream")
 	ctx.Header("Cache-Control","no-cache")
 	ctx.Header("Connection","keep-alive")
@@ -49,15 +69,15 @@ func(c *Controller) StreamSSE(ctx *gin.Context,client chan string) {
 }
 
 // notifies the admin about the events on sse
-func (c *Controller) AdminNotiFHandler(ctx *gin.Context) {
+func (c *Controller) hanldeEventAdminNotiFHandler(ctx *gin.Context) {
 	key := NotificationKeyAdminNewOrders
 	client := make(chan string,10)
-	c.NotificationManager.AddClient(key,client)
+	c.NotificationManagerStore.NotiManagerIface.AddClient(key,client)
 	
 	defer func ()  {
-		c.NotificationManager.RemoveClient(key,client)
+		c.NotificationManagerStore.NotiManagerIface.RemoveClient(key,client)
 		slog.Info("Admin client disconnected")
 	}()
 
-	c.StreamSSE(ctx,client)
+	c.handleEventStreamSSE(ctx,client)
 }

@@ -7,6 +7,26 @@ import (
 	"gorm.io/gorm"
 )
 
+// stores only those methods which belongs to Controller but related to middleware only
+type MiddlewareOnlyControllerStore interface {
+	AuthorizingMw() gin.HandlerFunc
+}
+
+
+type middlewareController struct {
+	MiddlewareOnlyControllerStoreIface MiddlewareOnlyControllerStore
+}
+
+// Routes only middleware controller methods
+func NewMiddlewareController(c Controller) middlewareController {
+	return middlewareController{
+		MiddlewareOnlyControllerStoreIface:&c ,
+	}
+}
+
+
+
+
 //$ method belongs to *Controller type
 func(c *Controller) AuthorizingMw() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
@@ -20,7 +40,7 @@ func(c *Controller) AuthorizingMw() gin.HandlerFunc {
 		}
 
 		// if id is available --> get that user ( for user rltd calls --> have a sep usrMdl)
-		_,err := c.UserModel.GetUserByID(userID) //! fetching user from retrieved userID from session when it was set during Post login req
+		_,err := c.UserStore.GetUserByID(userID) //! fetching user from retrieved userID from session when it was set during Post login req
 		if err == gorm.ErrRecordNotFound {
 			ClearSession(ctx)
 			ctx.Redirect(http.StatusBadRequest,"/login")

@@ -19,15 +19,39 @@ type AdminDashboardData struct {
 	Statuses []string
 }
 
+// @Interface of type Controller where all methods belongs to this type -> *Controller
+
+
+// stores only those methods which belongs to Controller but related to admin only
+type AdminOnlyControllerStore interface {
+	HandleAdminLoginGetRequest(ctx *gin.Context)
+	HandleAdminLoginPostRequest(ctx *gin.Context)
+	HandleAdminLogout(ctx *gin.Context)
+	ServeAdminDashboardPanel(ctx *gin.Context)
+	HandleAdminOrderUpdateRequest(ctx *gin.Context)
+	HandleAdminOrderDelelteRequest(ctx *gin.Context)
+}
+
+
+type adminController struct {
+	adminRoutesControllerIface AdminOnlyControllerStore
+}
+
+// Routes only admin controller methods
+func NewAdminController(c Controller) adminController {
+	return adminController{
+		adminRoutesControllerIface:&c ,
+	}
+}
 // method that belongs to the *Controller
-func(c *Controller) HandleLoginGetRequest(ctx *gin.Context) {
+func(c *Controller) HandleAdminLoginGetRequest(ctx *gin.Context) {
 	//! loading template of loginPage in handler/controller methods
 
 	ctx.HTML(http.StatusOK,"login.tmpl",LoginData{})		
 }
 
 // method that makes post req to send data of loggin in client
-func(c *Controller) HandleLoginPostRequest(ctx *gin.Context) {
+func(c *Controller) HandleAdminLoginPostRequest(ctx *gin.Context) {
 	var userloginPayload struct {
 		Username string `form:"username" binding:"required,min=4,max=27"`
 		Password string `form:"password" binding:"required,min=4"`
@@ -42,7 +66,7 @@ func(c *Controller) HandleLoginPostRequest(ctx *gin.Context) {
 	}
 
 	// if there was no validator errors when did the binding process thing
-	user,err := c.UserModel.AuthenticateUser(userloginPayload.Username,userloginPayload.Password)
+	user,err := c.UserStore.AuthenticateUser(userloginPayload.Username,userloginPayload.Password)
 	if err!= nil {
 		ctx.HTML(http.StatusOK,"login.tmpl",LoginData{
 			Error: "Invalid username or password.", 
@@ -56,7 +80,7 @@ func(c *Controller) HandleLoginPostRequest(ctx *gin.Context) {
 	ctx.Redirect(http.StatusSeeOther,"/admin")
 }
 
-func(c *Controller) HandleLogout(ctx *gin.Context) {
+func(c *Controller) HandleAdminLogout(ctx *gin.Context) {
 	err := ClearSession(ctx)
 	if err != nil {
 		ctx.String(http.StatusInternalServerError,"error",err.Error())
@@ -70,7 +94,7 @@ func(c *Controller) HandleLogout(ctx *gin.Context) {
 func(c *Controller) ServeAdminDashboardPanel(ctx *gin.Context) {
 
 	// * fetching all orders in this panel for admin login
-	orders,err := c.orderModel.GetAllOrders()
+	orders,err := c.OrderStore.GetAllOrders()
 	if err != nil {
 		ctx.String(http.StatusInternalServerError,err.Error())
 		return
@@ -87,30 +111,30 @@ func(c *Controller) ServeAdminDashboardPanel(ctx *gin.Context) {
 }
 
 // update order status
-func(c *Controller) HandleOrderUpdateRequest(ctx *gin.Context) {
+func(c *Controller) HandleAdminOrderUpdateRequest(ctx *gin.Context) {
 	orderID := ctx.Param("id")
 	newStatus := ctx.PostForm("status") //* fetching new status val that has to be updated with
 
-	err := c.orderModel.UpdateOrderStatus(orderID,newStatus)
+	err := c.OrderStore.UpdateOrderStatus(orderID,newStatus)
 	if err != nil {
 		ctx.String(http.StatusInternalServerError,err.Error())
 		return
 	}
 
-	c.NotificationManager.Notify(NotificationKeyOrder(orderID),"order_updated")
+	c.NotificationManagerStore.NotiManagerIface.Notify(NotificationKeyOrder(orderID),"order_updated")
 
 	ctx.Redirect(http.StatusSeeOther,"/admin")
 }
 
 // deletes order from the db
-func(c *Controller) HandleOrderDelelteRequest(ctx *gin.Context) {
+func(c *Controller) HandleAdminOrderDelelteRequest(ctx *gin.Context) {
 	// fetch id of the order that is going to be deleted
 	orderID := ctx.Param("id")
 	if orderID == "" {
 		ctx.String(http.StatusInternalServerError,"Order id not found!.")
 	}
 	// call order delete meth that is attached on O.M
-	err := c.orderModel.DeleteOrder(orderID)
+	err := c.OrderStore.DeleteOrder(orderID)
 	if err != nil {
 		ctx.String(http.StatusInternalServerError,err.Error())
 	}
